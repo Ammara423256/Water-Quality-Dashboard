@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Water quality monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div><h1>Water quality monitor</h1><p id="sub"></p></div>
+  <div class="acts">
+    <button class="btn js-station">Add station</button>
+    <button class="btn primary js-reading">Add reading</button>
+  </div>
+  <div id="msg" role="status"></div>
+</header>
+<div class="wrap">
+  <aside><h2>Stations</h2><div id="stations"></div></aside>
+  <main>
+    <div id="empty" hidden>
+      <h2>No stations yet</h2>
+      <p>Add a monitoring station, then record its first reading.</p>
+      <button class="btn primary js-station">Add station</button>
+    </div>
+    <div id="content" hidden>
+      <div class="head" id="head"></div>
+      <div id="tiles"></div>
+      <section class="panel">
+        <div class="ph"><h3 id="ct"></h3><div class="seg" id="range"></div></div>
+        <div class="cw"><svg id="chart" viewBox="0 0 800 280" role="img" aria-label="Time series of the selected parameter"></svg><div id="tip"></div></div>
+      </section>
+      <section class="panel"><div class="sec"><h2>Recent limit breaches</h2></div><ul id="alerts"></ul></section>
+      <section class="panel"><div class="sec"><h2>Latest readings</h2></div><ul id="rl"></ul></section>
+    </div>
+  </main>
+</div>
+
+<dialog id="dlgS">
+  <form id="fS"><h2>Add station</h2>
+    <label>Name<input name="name" required maxlength="80" autocomplete="off"></label>
+    <label>Location (optional)<input name="location" maxlength="120" autocomplete="off"></label>
+    <p class="err" id="eS" role="alert"></p>
+    <div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save station</button></div>
+  </form>
+</dialog>
+<dialog id="dlgR">
+  <form id="fR"><h2>Add reading</h2>
+    <div class="grid2">
+      <label>Station<select name="station" id="rs" required></select></label>
+      <label>Date and time<input name="taken" id="rt" type="datetime-local" required></label>
+    </div>
+    <div class="grid2" id="rfields"></div>
+    <p class="err" id="eR" role="alert"></p>
+    <div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save reading</button></div>
+  </form>
+</dialog>
+<script src="app.js"></script>
+</body>
+</html>

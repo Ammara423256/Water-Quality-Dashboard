@@ -1,0 +1,17 @@
+{
+  "name": "water-quality-db",
+  "version": "1.0.0",
+  "description": "Water quality monitoring dashboard with a SQLite database",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.2.1"
+  }
+}
