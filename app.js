@@ -4,6 +4,7 @@ const P=[
  {k:'turbidity',name:'Turbidity',        unit:'NTU',  max:5,             m:1,   dec:1, noise:.8},
  {k:'dissolved_oxygen',  name:'Dissolved oxygen', unit:'mg/L', min:5,             m:1,   dec:1, noise:.6},
  {k:'tds', name:'TDS',              unit:'mg/L', max:1000,          m:100, dec:0, noise:40},
+ {k:'conductivity',name:'Electrical conductivity',unit:'µS/cm',max:1500,m:150,dec:0,noise:60},
  {k:'temperature',name:'Temperature',      unit:'°C',                              dec:1, noise:1}
 ];
 const LBL={ok:'Within limits',warn:'Near limit',bad:'Out of limits',info:'Monitored',na:'No data'};
@@ -113,7 +114,7 @@ async function load(){
   if(!DATA[S.sid])S.sid=st.length?st[0].name:null;
   render();
 }
-const SH={ph:'pH',turbidity:'Turb.',dissolved_oxygen:'DO',tds:'TDS',temperature:'Temp'};
+const SH={ph:'pH',turbidity:'Turb.',dissolved_oxygen:'DO',tds:'TDS',conductivity:'EC',temperature:'Temp'};
 function readingsList(){
   const rows=DATA[S.sid]||[];
   $('#rl').innerHTML=rows.length?rows.slice(-10).reverse().map(r=>`<li><span>${fdt(r.t)}</span><span class="w">${P.map(p=>SH[p.k]+' '+fmt(r[p.k],p)).join(' · ')}</span><button class="btn" data-del="${r.id}" aria-label="Delete reading from ${fdt(r.t)}">Delete</button></li>`).join(''):'<li class="empty">No readings yet for this station.</li>';
