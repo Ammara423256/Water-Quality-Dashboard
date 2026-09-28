@@ -18,10 +18,15 @@ db.exec(`
     id INTEGER PRIMARY KEY,
     station_id INTEGER NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
     taken_at TEXT NOT NULL,
-    ph REAL, turbidity REAL, dissolved_oxygen REAL, tds REAL, temperature REAL
+    ph REAL, turbidity REAL, dissolved_oxygen REAL, tds REAL, temperature REAL, conductivity REAL
   );
   CREATE INDEX IF NOT EXISTS idx_readings_station_time ON readings(station_id, taken_at);
 `);
+
+// Migration: databases created before conductivity was added lack the column.
+if (!db.prepare('PRAGMA table_info(readings)').all().some(c => c.name === 'conductivity')) {
+  db.exec('ALTER TABLE readings ADD COLUMN conductivity REAL');
+}
 
 const app = express();
 app.use(express.json({ limit: '100kb' }));
@@ -63,10 +68,10 @@ app.post('/api/readings', handle((req, res) => {
   if (!st) throw new Error('Unknown station');
   const t = new Date(b.taken_at);
   if (isNaN(t)) throw new Error('Invalid date and time');
-  const v = [num(b.ph, 0, 14), num(b.turbidity, 0, 1e5), num(b.dissolved_oxygen, 0, 30), num(b.tds, 0, 1e5), num(b.temperature, -5, 60)];
+  const v = [num(b.ph, 0, 14), num(b.turbidity, 0, 1e5), num(b.dissolved_oxygen, 0, 30), num(b.tds, 0, 1e5), num(b.temperature, -5, 60), num(b.conductivity, 0, 1e6)];
   if (v.every(x => x === null)) throw new Error('Enter at least one measurement');
   const info = db.prepare(
-    'INSERT INTO readings (station_id, taken_at, ph, turbidity, dissolved_oxygen, tds, temperature) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO readings (station_id, taken_at, ph, turbidity, dissolved_oxygen, tds, temperature, conductivity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   ).run(st.id, t.toISOString(), ...v);
   res.status(201).json({ id: info.lastInsertRowid });
 }));
