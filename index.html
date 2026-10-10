@@ -9,11 +9,31 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<!-- Login screen: shown until /api/me confirms a session -->
+<main id="login" hidden>
+  <div class="loginbox">
+    <h1>Water quality monitor</h1>
+    <p class="sub">Sign in to view or record readings.</p>
+    <form id="fLogin">
+      <label>Email<input name="email" type="email" required autocomplete="username"></label>
+      <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
+      <p class="err" id="eLogin" role="alert"></p>
+      <button class="btn primary" style="width:100%">Sign in</button>
+    </form>
+  </div>
+</main>
+
+<!-- Main app: shown once logged in -->
+<div id="app" hidden>
 <header class="top">
   <div><h1>Water quality monitor</h1><p id="sub"></p></div>
   <div class="acts">
-    <button class="btn js-station">Add station</button>
-    <button class="btn primary js-reading">Add reading</button>
+    <button class="btn js-station" data-role="editor">Add station</button>
+    <button class="btn primary js-reading" data-role="editor">Add reading</button>
+    <button class="btn js-users" data-role="admin">Manage users</button>
+    <span id="whoami"></span>
+    <button class="btn" id="logout">Log out</button>
   </div>
   <div id="msg" role="status"></div>
 </header>
@@ -23,7 +43,7 @@
     <div id="empty" hidden>
       <h2>No stations yet</h2>
       <p>Add a monitoring station, then record its first reading.</p>
-      <button class="btn primary js-station">Add station</button>
+      <button class="btn primary js-station" data-role="editor">Add station</button>
     </div>
     <div id="content" hidden>
       <div class="head" id="head"></div>
@@ -36,6 +56,7 @@
       <section class="panel"><div class="sec"><h2>Latest readings</h2></div><ul id="rl"></ul></section>
     </div>
   </main>
+</div>
 </div>
 
 <dialog id="dlgS">
@@ -57,6 +78,21 @@
     <div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save reading</button></div>
   </form>
 </dialog>
+
+<dialog id="dlgU">
+  <h2>Users</h2>
+  <ul id="ul"></ul>
+  <form id="fU">
+    <div class="grid2">
+      <label>Email<input name="email" type="email" required autocomplete="off"></label>
+      <label>Role<select name="role"><option value="viewer">Viewer (read-only)</option><option value="editor">Editor (can add/delete data)</option><option value="admin">Admin (can also manage users)</option></select></label>
+    </div>
+    <label>Temporary password (8+ characters)<input name="password" type="text" minlength="8" required autocomplete="off"></label>
+    <p class="err" id="eU" role="alert"></p>
+    <div class="row"><button type="button" class="btn" data-close>Close</button><button class="btn primary">Add user</button></div>
+  </form>
+</dialog>
+
 <script src="app.js"></script>
 </body>
 </html>
