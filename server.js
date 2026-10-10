@@ -84,6 +84,13 @@ app.use(session({
   }
 }));
 app.use(express.static(path.join(__dirname, 'public')));
+// Temporary debug logging — safe to remove once things are working.
+app.use((req, res, next) => {
+  const hadCookie = !!(req.headers.cookie && req.headers.cookie.includes('connect.sid'));
+  console.log('  session:', req.sessionID, '| cookie sent by browser:', hadCookie, '| logged-in user on this session:', req.session.user ? req.session.user.email : '(none)');
+  res.on('finish', () => console.log('  -> responded', res.statusCode, 'for', req.method, req.path));
+  next();
+});
 
 const handle = fn => async (req, res) => {
   try { await fn(req, res); }
