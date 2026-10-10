@@ -16,7 +16,7 @@ const fdate=d=>d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
 const fdt=d=>fdate(d)+', '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
 
 /* ---- State ---- */
-let DATA={},END=Date.now(),S={sid:null,k:'ph',days:30};
+let DATA={},END=Date.now(),S={sid:null,k:'ph',days:30},ME=null;
 
 function status(p,v){
   if(!Number.isFinite(v))return'na';
@@ -39,7 +39,8 @@ function render(){
   $('#stations').innerHTML=names.map(n=>{const o=overall(DATA[n]);
     return `<button class="st ${o}" data-s="${esc(n)}" aria-current="${n===S.sid}"><span class="dot"></span><span><b>${esc(n)}</b><small>${LBL[o]}</small></span></button>`}).join('');
   const o=overall(rows),lr=rows[rows.length-1];
-  $('#head').innerHTML=`<h2>${esc(S.sid)}</h2><span class="pill ${o}">${LBL[o]}</span><span class="t">${lr?'Last reading '+fdt(lr.t):'No readings yet'}</span><button class="btn" id="delst" style="margin-left:auto">Delete station</button>`;
+  $('#head').innerHTML=`<h2>${esc(S.sid)}</h2><span class="pill ${o}">${LBL[o]}</span><span class="t">${lr?'Last reading '+fdt(lr.t):'No readings yet'}</span>`+
+    (canEdit()?'<button class="btn" id="delst" style="margin-left:auto">Delete station</button>':'');
   $('#tiles').innerHTML=P.map(p=>{
     const v=latest(rows,p),s=status(p,v),pts=rows.filter(r=>Number.isFinite(r[p.k])).slice(-28).map(r=>r[p.k]);
     const lo=Math.min(...pts),hi=Math.max(...pts),sp=pts.length<2?'':pts.map((x,i)=>`${(i/(pts.length-1||1))*100},${26-((x-lo)/((hi-lo)||1))*24}`).join(' ');
@@ -97,13 +98,18 @@ function alerts(){
     return `<li class="bad"><span class="dot"></span><span><b>${p.name}</b> ${fmt(v,p)} ${p.unit} — ${dir} the limit of ${lim}</span><span class="w">${fdt(r.t)}</span></li>`}).join('');
 }
 
-/* ---- Database access (REST API, see server.js) ---- */
+/* ---- API access (REST, see server.js). 401 means the session died (logged out
+   elsewhere, or expired) — bounce back to the login screen rather than erroring. ---- */
 async function api(path,method='GET',body){
   const r=await fetch('/api/'+path,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(r.status===401){showLogin();throw new Error('Your session ended — please sign in again.')}
   const j=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(j.error||'Request failed');
   return j;
 }
+const canEdit=()=>ME&&(ME.role==='editor'||ME.role==='admin');
+const isAdmin=()=>ME&&ME.role==='admin';
+
 let ST=[];
 async function load(){
   const [st,rd]=await Promise.all([api('stations'),api('readings')]);
@@ -117,8 +123,44 @@ async function load(){
 const SH={ph:'pH',turbidity:'Turb.',dissolved_oxygen:'DO',tds:'TDS',conductivity:'EC',temperature:'Temp'};
 function readingsList(){
   const rows=DATA[S.sid]||[];
-  $('#rl').innerHTML=rows.length?rows.slice(-10).reverse().map(r=>`<li><span>${fdt(r.t)}</span><span class="w">${P.map(p=>SH[p.k]+' '+fmt(r[p.k],p)).join(' · ')}</span><button class="btn" data-del="${r.id}" aria-label="Delete reading from ${fdt(r.t)}">Delete</button></li>`).join(''):'<li class="empty">No readings yet for this station.</li>';
+  $('#rl').innerHTML=rows.length?rows.slice(-10).reverse().map(r=>`<li><span>${fdt(r.t)}</span><span class="w">${P.map(p=>SH[p.k]+' '+fmt(r[p.k],p)).join(' · ')}</span>`+
+    (canEdit()?`<button class="btn" data-del="${r.id}" aria-label="Delete reading from ${fdt(r.t)}">Delete</button>`:'')+`</li>`).join(''):'<li class="empty">No readings yet for this station.</li>';
 }
+
+/* ---- Auth ---- */
+function showLogin(){ME=null;$('#login').hidden=false;$('#app').hidden=true}
+function showApp(){
+  $('#login').hidden=true;$('#app').hidden=false;
+  $('#whoami').textContent=`${ME.email} · ${ME.role}`;
+  document.querySelectorAll('[data-role]').forEach(el=>{
+    el.hidden = el.dataset.role==='admin' ? !isAdmin() : !canEdit();
+  });
+}
+async function checkSession(){
+  try{ME=await api('me');showApp();await load()}
+  catch{showLogin()}
+}
+$('#fLogin').onsubmit=async e=>{
+  e.preventDefault();const f=new FormData(e.target);
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:f.get('email'),password:f.get('password')})});
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error||'Could not sign in');
+    ME=j;e.target.reset();$('#eLogin').textContent='';showApp();await load();
+  }catch(x){$('#eLogin').textContent=x.message}
+};
+$('#logout').onclick=async()=>{await fetch('/api/logout',{method:'POST'});showLogin()};
+
+/* ---- User management (admin only) ---- */
+async function loadUsers(){
+  const users=await api('users');
+  $('#ul').innerHTML=users.map(u=>`<li><span>${esc(u.email)}</span><span class="w">${u.role}</span>`+
+    (u.id!==ME.id?`<button class="btn" data-deluser="${u.id}" aria-label="Remove ${esc(u.email)}">Remove</button>`:' <span class="w">(you)</span>')+`</li>`).join('')||'<li class="empty">No users yet.</li>';
+}
+function openUsers(){$('#eU').textContent='';loadUsers();$('#dlgU').showModal()}
+$('#fU').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
+  try{await api('users','POST',{email:f.get('email'),password:f.get('password'),role:f.get('role')});e.target.reset();await loadUsers()}
+  catch(x){$('#eU').textContent=x.message}};
 
 /* ---- Forms ---- */
 const dS=$('#dlgS'),dR=$('#dlgR');
@@ -141,16 +183,18 @@ $('#fR').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
 
 /* ---- Events ---- */
 document.addEventListener('click',async e=>{
-  const t=e.target,c=t.closest('[data-close]'),r=t.closest('[data-del]'),s=t.closest('[data-s]'),k=t.closest('[data-k]'),d=t.closest('[data-d]');
+  const t=e.target,c=t.closest('[data-close]'),r=t.closest('[data-del]'),du=t.closest('[data-deluser]'),s=t.closest('[data-s]'),k=t.closest('[data-k]'),d=t.closest('[data-d]');
   try{
     if(c){c.closest('dialog').close();return}
     if(t.closest('.js-station')){openStation();return}
     if(t.closest('.js-reading')){openReading();return}
+    if(t.closest('.js-users')){openUsers();return}
     if(r){if(confirm('Delete this reading?')){await api('readings/'+r.dataset.del,'DELETE');await load()}return}
+    if(du){if(confirm('Remove this user? They will no longer be able to sign in.')){await api('users/'+du.dataset.deluser,'DELETE');await loadUsers()}return}
     if(t.closest('#delst')){if(confirm(`Delete "${S.sid}" and all its readings?`)){await api('stations/'+ST.find(x=>x.name===S.sid).id,'DELETE');await load()}return}
     if(s)S.sid=s.dataset.s;else if(k)S.k=k.dataset.k;else if(d)S.days=+d.dataset.d;else return;
     render();
   }catch(x){$('#msg').textContent=x.message}
 });
 
-load().catch(()=>{$('#msg').textContent='Cannot reach the server. Start it with "npm start".'});
+checkSession();
