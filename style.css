@@ -71,3 +71,15 @@ dialog input,dialog select{display:block;width:100%;margin-top:4px;padding:8px 1
 #empty{text-align:center;padding:60px 16px}
 #empty h2{font:400 34px/1.1 var(--serif);margin:0 0 8px}
 #empty p{color:var(--muted);margin:0 0 16px}
+
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.loginbox{width:min(360px,100%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px}
+.loginbox h1{font:400 26px/1.1 var(--serif);margin:0 0 4px}
+.loginbox .sub{color:var(--muted);font-size:13px;margin:0 0 18px}
+.loginbox label{display:block;font-size:13px;color:var(--muted);margin-bottom:12px}
+.loginbox input{display:block;width:100%;margin-top:4px;padding:9px 10px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px}
+#whoami{color:var(--muted);font-size:13px}
+#ul{list-style:none;margin:0 0 16px;padding:0;font-size:14px;max-height:240px;overflow-y:auto}
+#ul li{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+#ul li:first-child{border-top:0}
+#ul .w{color:var(--muted);font-size:13px;margin-left:auto}
