@@ -101,6 +101,7 @@ const num = (v, lo, hi) => {
   return n;
 };
 function requireAuth(req, res, next) {
+  console.log('requireAuth: sessionID=', req.sessionID, 'has user=', !!req.session.user, 'cookie header present=', !!req.headers.cookie);
   if (req.session.user) return next();
   res.status(401).json({ error: 'Please log in' });
 }
@@ -122,7 +123,7 @@ app.post('/api/login', handle(async (req, res) => {
   console.log('login: query finished, found', r.rows.length, 'matching row(s)');
   const u = r.rows[0];
   if (!u || !(await bcrypt.compare(password, u.password_hash))) throw fail(401, 'Incorrect email or password');
-  console.log('login: password OK, saving session');
+  console.log('login: password OK, saving session. sessionID=', req.sessionID);
   req.session.user = { id: u.id, email: u.email, role: u.role };
   res.json(req.session.user);
   console.log('login: response sent');
