@@ -69,6 +69,8 @@ async function init() {
 const app = express();
 app.set('trust proxy', 1); // Render sits behind a proxy; needed for secure cookies to work
 app.use(express.json({ limit: '100kb' }));
+// Temporary debug logging — safe to remove once things are working.
+app.use((req, res, next) => { console.log('REQ', req.method, req.path); next(); });
 app.use(session({
   store: new PgSession({ pool, tableName: 'session', createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET,
@@ -113,13 +115,17 @@ function requireAdmin(req, res, next) {
 
 /* ---- Auth ---- */
 app.post('/api/login', handle(async (req, res) => {
+  console.log('login: looking up user by email');
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
   const r = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+  console.log('login: query finished, found', r.rows.length, 'matching row(s)');
   const u = r.rows[0];
   if (!u || !(await bcrypt.compare(password, u.password_hash))) throw fail(401, 'Incorrect email or password');
+  console.log('login: password OK, saving session');
   req.session.user = { id: u.id, email: u.email, role: u.role };
   res.json(req.session.user);
+  console.log('login: response sent');
 }));
 
 app.post('/api/logout', (req, res) => { req.session.destroy(() => res.json({ ok: true })); });
