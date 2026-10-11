@@ -16,7 +16,7 @@ const fdate=d=>d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
 const fdt=d=>fdate(d)+', '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
 
 /* ---- State ---- */
-let DATA={},END=Date.now(),S={sid:null,k:'ph',days:30,tab:'chart'},ME=null;
+let DATA={},END=Date.now(),S={sid:null,k:'ph',days:30,tab:'dashboard'},ME=null;
 
 function status(p,v){
   if(!Number.isFinite(v))return'na';
@@ -37,10 +37,10 @@ function render(){
   $('#sub').textContent=none?'No stations yet':`${names.length} station${names.length>1?'s':''}`;
   if(none){$('#stations').innerHTML='';return}
   $('#stations').innerHTML=names.map(n=>{const o=overall(DATA[n]);
-    return `<button class="st ${o}" data-s="${esc(n)}" aria-current="${n===S.sid}"><span class="dot"></span><span><b>${esc(n)}</b><small>${LBL[o]}</small></span></button>`}).join('');
+    return `<button class="st ${o}" data-s="${esc(n)}" aria-current="${n===S.sid}"><span class="dot"></span>${esc(n)}</button>`}).join('');
   const o=overall(rows),lr=rows[rows.length-1];
   $('#head').innerHTML=`<h2>${esc(S.sid)}</h2><span class="pill ${o}">${LBL[o]}</span><span class="t">${lr?'Last reading '+fdt(lr.t):'No readings yet'}</span>`+
-    (canEdit()?'<button class="btn" id="delst" style="margin-left:auto">Delete station</button>':'');
+    (canEdit()?'<button class="btn" id="delst">Delete station</button>':'');
   $('#tiles').innerHTML=P.map(p=>{
     const v=latest(rows,p),s=status(p,v),pts=rows.filter(r=>Number.isFinite(r[p.k])).slice(-28).map(r=>r[p.k]);
     const lo=Math.min(...pts),hi=Math.max(...pts),sp=pts.length<2?'':pts.map((x,i)=>`${(i/(pts.length-1||1))*100},${26-((x-lo)/((hi-lo)||1))*24}`).join(' ');
@@ -54,7 +54,7 @@ function render(){
 
 function showTab(){
   document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===S.tab));
-  document.querySelectorAll('.tabpanel').forEach(p=>p.hidden=p.dataset.panel!==S.tab);
+  document.querySelectorAll('.tabpanel[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==S.tab);
 }
 
 function inRange(rows){const cut=END-S.days*864e5;return rows.filter(r=>r.t.getTime()>=cut)}
@@ -97,6 +97,8 @@ function chart(){
 function alerts(){
   const rows=inRange(DATA[S.sid]),items=[];
   for(const r of rows)for(const p of P)if(status(p,r[p.k])==='bad')items.push({r,p});
+  const badge=$('#alertCount');
+  badge.hidden=!items.length;badge.textContent=items.length;
   const ul=$('#alerts');
   if(!items.length){ul.innerHTML='<li class="empty">No limit breaches in this period.</li>';return}
   ul.innerHTML=items.slice(-8).reverse().map(({r,p})=>{
