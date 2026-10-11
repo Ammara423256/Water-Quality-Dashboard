@@ -48,12 +48,23 @@
     <div id="content" hidden>
       <div class="head" id="head"></div>
       <div id="tiles"></div>
-      <section class="panel">
-        <div class="ph"><h3 id="ct"></h3><div class="seg" id="range"></div></div>
-        <div class="cw"><svg id="chart" viewBox="0 0 800 280" role="img" aria-label="Time series of the selected parameter"></svg><div id="tip"></div></div>
-      </section>
-      <section class="panel"><div class="sec"><h2>Recent limit breaches</h2></div><ul id="alerts"></ul></section>
-      <section class="panel"><div class="sec"><h2>Latest readings</h2></div><ul id="rl"></ul></section>
+      <nav class="tabs" id="tabs">
+        <button data-tab="chart" aria-pressed="true">Chart</button>
+        <button data-tab="breaches" aria-pressed="false">Breaches</button>
+        <button data-tab="readings" aria-pressed="false">Readings</button>
+      </nav>
+      <div class="tabpanel" data-panel="chart">
+        <section class="panel">
+          <div class="ph"><h3 id="ct"></h3><div class="seg" id="range"></div></div>
+          <div class="cw"><svg id="chart" viewBox="0 0 800 280" role="img" aria-label="Time series of the selected parameter"></svg><div id="tip"></div></div>
+        </section>
+      </div>
+      <div class="tabpanel" data-panel="breaches" hidden>
+        <section class="panel"><div class="sec"><h2>Recent limit breaches</h2></div><ul id="alerts"></ul></section>
+      </div>
+      <div class="tabpanel" data-panel="readings" hidden>
+        <section class="panel"><div class="sec"><h2>Latest readings</h2></div><ul id="rl"></ul></section>
+      </div>
     </div>
   </main>
 </div>
