@@ -16,7 +16,7 @@ const fdate=d=>d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
 const fdt=d=>fdate(d)+', '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
 
 /* ---- State ---- */
-let DATA={},END=Date.now(),S={sid:null,k:'ph',days:30},ME=null;
+let DATA={},END=Date.now(),S={sid:null,k:'ph',days:30,tab:'chart'},ME=null;
 
 function status(p,v){
   if(!Number.isFinite(v))return'na';
@@ -48,7 +48,13 @@ function render(){
       <span class="v">${fmt(v,p)}<small>${p.unit}</small></span><span class="s">${LBL[s]}</span><span class="l">${limitText(p)}</span>
       <svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${sp}" fill="none" stroke="var(--c)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg></button>`}).join('');
   $('#range').innerHTML=[7,14,30].map(d=>`<button data-d="${d}" aria-pressed="${d===S.days}">${d} days</button>`).join('');
+  showTab();
   chart();alerts();readingsList();
+}
+
+function showTab(){
+  document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===S.tab));
+  document.querySelectorAll('.tabpanel').forEach(p=>p.hidden=p.dataset.panel!==S.tab);
 }
 
 function inRange(rows){const cut=END-S.days*864e5;return rows.filter(r=>r.t.getTime()>=cut)}
@@ -183,7 +189,7 @@ $('#fR').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
 
 /* ---- Events ---- */
 document.addEventListener('click',async e=>{
-  const t=e.target,c=t.closest('[data-close]'),r=t.closest('[data-del]'),du=t.closest('[data-deluser]'),s=t.closest('[data-s]'),k=t.closest('[data-k]'),d=t.closest('[data-d]');
+  const t=e.target,c=t.closest('[data-close]'),r=t.closest('[data-del]'),du=t.closest('[data-deluser]'),s=t.closest('[data-s]'),k=t.closest('[data-k]'),d=t.closest('[data-d]'),tb=t.closest('[data-tab]');
   try{
     if(c){c.closest('dialog').close();return}
     if(t.closest('.js-station')){openStation();return}
@@ -192,6 +198,7 @@ document.addEventListener('click',async e=>{
     if(r){if(confirm('Delete this reading?')){await api('readings/'+r.dataset.del,'DELETE');await load()}return}
     if(du){if(confirm('Remove this user? They will no longer be able to sign in.')){await api('users/'+du.dataset.deluser,'DELETE');await loadUsers()}return}
     if(t.closest('#delst')){if(confirm(`Delete "${S.sid}" and all its readings?`)){await api('stations/'+ST.find(x=>x.name===S.sid).id,'DELETE');await load()}return}
+    if(tb){S.tab=tb.dataset.tab;showTab();return}
     if(s)S.sid=s.dataset.s;else if(k)S.k=k.dataset.k;else if(d)S.days=+d.dataset.d;else return;
     render();
   }catch(x){$('#msg').textContent=x.message}
