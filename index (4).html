@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Water quality monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Login screen: shown until /api/me confirms a session -->
+<main id="login" hidden>
+  <div class="loginbox">
+    <h1>Water quality monitor</h1>
+    <p class="sub">Sign in to view or record readings.</p>
+    <form id="fLogin">
+      <label>Email<input name="email" type="email" required autocomplete="username"></label>
+      <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
+      <p class="err" id="eLogin" role="alert"></p>
+      <button class="btn primary" style="width:100%">Sign in</button>
+    </form>
+  </div>
+</main>
+
+<!-- Main app: shown once logged in -->
+<div id="app" hidden>
+  <header class="top">
+    <div><h1>Water quality monitor</h1><p id="sub"></p></div>
+    <div class="acts">
+      <button class="btn js-station" data-role="editor">Add station</button>
+      <button class="btn primary js-reading" data-role="editor">Add reading</button>
+      <button class="btn js-users" data-role="admin">Manage users</button>
+      <span id="whoami"></span>
+      <button class="btn" id="logout">Log out</button>
+    </div>
+    <div id="msg" role="status"></div>
+  </header>
+
+  <nav class="stationbar" id="stations"></nav>
+
+  <main class="pagewrap">
+    <div id="empty" hidden>
+      <h2>No stations yet</h2>
+      <p>Add a monitoring station, then record its first reading.</p>
+      <button class="btn primary js-station" data-role="editor">Add station</button>
+    </div>
+
+    <div id="content" hidden>
+      <div class="head" id="head"></div>
+      <div id="tiles"></div>
+
+      <nav class="tabs" id="tabs">
+        <button data-tab="dashboard" aria-pressed="true">Dashboard</button>
+        <button data-tab="alerts" aria-pressed="false">Alerts<span class="count" id="alertCount" hidden>0</span></button>
+        <button data-tab="log" aria-pressed="false">Reading log</button>
+      </nav>
+
+      <div class="tabpanel" data-panel="dashboard">
+        <section class="panel">
+          <div class="ph"><h3 id="ct"></h3><div class="seg" id="range"></div></div>
+          <div class="cw"><svg id="chart" viewBox="0 0 800 280" role="img" aria-label="Time series of the selected parameter"></svg><div id="tip"></div></div>
+        </section>
+      </div>
+
+      <div class="tabpanel" data-panel="alerts" hidden>
+        <section class="panel"><div class="sec"><h2>Recent limit breaches</h2></div><ul id="alerts"></ul></section>
+      </div>
+
+      <div class="tabpanel" data-panel="log" hidden>
+        <section class="panel"><div class="sec"><h2>Latest readings</h2></div><ul id="rl"></ul></section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<dialog id="dlgS">
+  <form id="fS"><h2>Add station</h2>
+    <label>Name<input name="name" required maxlength="80" autocomplete="off"></label>
+    <label>Location (optional)<input name="location" maxlength="120" autocomplete="off"></label>
+    <p class="err" id="eS" role="alert"></p>
+    <div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save station</button></div>
+  </form>
+</dialog>
+<dialog id="dlgR">
+  <form id="fR"><h2>Add reading</h2>
+    <div class="grid2">
+      <label>Station<select name="station" id="rs" required></select></label>
+      <label>Date and time<input name="taken" id="rt" type="datetime-local" required></label>
+    </div>
+    <div class="grid2" id="rfields"></div>
+    <p class="err" id="eR" role="alert"></p>
+    <div class="row"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save reading</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgU">
+  <h2>Users</h2>
+  <ul id="ul"></ul>
+  <form id="fU">
+    <div class="grid2">
+      <label>Email<input name="email" type="email" required autocomplete="off"></label>
+      <label>Role<select name="role"><option value="viewer">Viewer (read-only)</option><option value="editor">Editor (can add/delete data)</option><option value="admin">Admin (can also manage users)</option></select></label>
+    </div>
+    <label>Temporary password (8+ characters)<input name="password" type="text" minlength="8" required autocomplete="off"></label>
+    <p class="err" id="eU" role="alert"></p>
+    <div class="row"><button type="button" class="btn" data-close>Close</button><button class="btn primary">Add user</button></div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
