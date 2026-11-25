@@ -181,25 +181,51 @@ app.get('/api/readings', requireAuth, handle(async (req, res) => {
 
 app.post('/api/readings', requireAuth, requireEditor, handle(async (req, res) => {
   const b = req.body;
-  console.log('reading submitted:', JSON.stringify(b)); // temporary — safe to remove
-  const st = await pool.query('SELECT id FROM stations WHERE id = $1', [b.station_id]);
-  if (!st.rows.length) throw new Error('Unknown station');
-  const t = new Date(b.taken_at);
-  if (isNaN(t)) throw new Error('Invalid date and time');
-  const student = String(b.student_name || '').trim().slice(0, 80) || null;
-  const v = [num(b.ph, 0, 14), num(b.dissolved_oxygen, 0, 30), num(b.tds, 0, 1e5), num(b.temperature, -5, 60), num(b.conductivity, 0, 1e6)];
-  if (v.every(x => x === null)) throw new Error('Enter at least one measurement');
-  const r = await pool.query(
-    `INSERT INTO readings (station_id, taken_at, student_name, ph, dissolved_oxygen, tds, temperature, conductivity)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-    [st.rows[0].id, t.toISOString(), student, ...v]
-  );
-  res.status(201).json({ id: r.rows[0].id });
-}));
 
-app.delete('/api/readings/:id', requireAuth, requireEditor, handle(async (req, res) => {
-  await pool.query('DELETE FROM readings WHERE id = $1', [req.params.id]);
-  res.json({ ok: true });
+  const st = await pool.query(
+    'SELECT id FROM stations WHERE id = $1',
+    [b.station_id]
+  );
+
+  if (!st.rows.length) throw new Error('Unknown village');
+
+  const sampleCode = String(b.sample_code || '').trim();
+  const sourceType = String(b.source_type || '').trim();
+
+  if (!sampleCode) throw new Error('Sample ID is required');
+
+  const t = new Date(b.taken_at);
+
+  if (isNaN(t)) throw new Error('Invalid collection date');
+
+  const v = [
+    num(b.ph, 0, 14),
+    num(b.dissolved_oxygen, 0, 30),
+    num(b.tds, 0, 1e5),
+    num(b.temperature, -5, 60),
+    num(b.conductivity, 0, 1e6)
+  ];
+
+  if (v.every(x => x === null)) {
+    throw new Error('Enter at least one measurement');
+  }
+
+  const result = await pool.query(
+    `INSERT INTO readings
+    (station_id, taken_at, sample_code, source_type,
+     ph, dissolved_oxygen, tds, temperature, conductivity)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     RETURNING id`,
+    [
+      st.rows[0].id,
+      t.toISOString(),
+      sampleCode,
+      sourceType || null,
+      ...v
+    ]
+  );
+
+  res.status(201).json({ id: result.rows[0].id });
 }));
 
 const port = process.env.PORT || 3000;
