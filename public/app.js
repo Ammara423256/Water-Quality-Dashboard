@@ -49,7 +49,15 @@ function render(){
       <svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${sp}" fill="none" stroke="var(--c)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg></button>`}).join('');
   $('#range').innerHTML=[7,14,30].map(d=>`<button data-d="${d}" aria-pressed="${d===S.days}">${d} days</button>`).join('');
   showTab();
-  chart();alerts();readingsList();
+
+addResearchCharts();
+
+chart();
+villageComparison();
+complianceChart();
+
+alerts();
+readingsList();
 }
 
 function showTab(){
@@ -59,40 +67,102 @@ function showTab(){
 
 function inRange(rows){const cut=END-S.days*864e5;return rows.filter(r=>r.t.getTime()>=cut)}
 
-function chart(){
-  const p=P.find(x=>x.k===S.k),rows=inRange(DATA[S.sid]).filter(r=>Number.isFinite(r[p.k]));
-  $('#ct').textContent=`${p.name}${p.unit?' ('+p.unit+')':''} · ${limitText(p)}`;
-  const svg=$('#chart');
-  if(!rows.length){svg.innerHTML='<text x="400" y="140" text-anchor="middle" fill="var(--muted)">No readings in this period</text>';return}
-  const W=800,H=280,m={l:46,r:14,t:12,b:26},vals=rows.map(r=>r[p.k]);
-  let lo=Math.min(...vals,p.min??Infinity),hi=Math.max(...vals,p.max??-Infinity);
-  const pad=(hi-lo)*.12||1;lo=Math.max(0,lo-pad);hi+=pad;
-  const t0=rows[0].t.getTime(),t1=rows[rows.length-1].t.getTime()||t0+1;
-  const X=t=>m.l+(t-t0)/((t1-t0)||1)*(W-m.l-m.r),Y=v=>H-m.b-(v-lo)/(hi-lo)*(H-m.t-m.b);
-  let g='';
-  for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4,y=Y(v);g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${m.l-8}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--muted)">${v.toFixed(p.dec>1?1:p.dec)}</text>`}
-  for(let i=0;i<=4;i++){const t=t0+(t1-t0)*i/4;g+=`<text x="${X(t)}" y="${H-6}" text-anchor="${i===0?'start':i===4?'end':'middle'}" font-size="11" fill="var(--muted)">${fdate(new Date(t))}</text>`}
-  let band='';
-  if(p.min!=null||p.max!=null){
-    const yt=p.max!=null?Y(p.max):m.t,yb=p.min!=null?Y(p.min):H-m.b;
-    band=`<rect x="${m.l}" y="${yt}" width="${W-m.l-m.r}" height="${Math.max(0,yb-yt)}" fill="var(--band)"/>`;
-    if(p.max!=null)band+=`<line x1="${m.l}" x2="${W-m.r}" y1="${yt}" y2="${yt}" stroke="var(--bad)" stroke-dasharray="5 4"/>`;
-    if(p.min!=null)band+=`<line x1="${m.l}" x2="${W-m.r}" y1="${yb}" y2="${yb}" stroke="var(--bad)" stroke-dasharray="5 4"/>`;
+
+function chart() {
+  const p = P.find(x => x.k === S.k);
+  const rows = (DATA[S.sid] || [])
+    .filter(r => Number.isFinite(Number(r[p.k])));
+
+  $('#ct').textContent =
+    `${p.name} by household · ${limitText(p)}`;
+
+  const svg = $('#chart');
+  const W = 800, H = 320;
+  const m = { l: 65, r: 25, t: 25, b: 65 };
+
+  if (!rows.length) {
+    svg.innerHTML = '<text x="400" y="150" text-anchor="middle">No samples available</text>';
+    return;
   }
-  const d=rows.map((r,i)=>(i?'L':'M')+X(r.t.getTime()).toFixed(1)+' '+Y(r[p.k]).toFixed(1)).join('');
-  const bad=rows.filter(r=>status(p,r[p.k])==='bad').map(r=>`<circle cx="${X(r.t.getTime())}" cy="${Y(r[p.k])}" r="3.5" fill="var(--bad)"/>`).join('');
-  svg.innerHTML=g+band+`<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`+bad+
-    `<line id="cur" y1="${m.t}" y2="${H-m.b}" stroke="var(--muted)" style="display:none"/><rect x="${m.l}" y="0" width="${W-m.l-m.r}" height="${H}" fill="transparent" id="hit"/>`;
-  const tip=$('#tip'),cur=$('#cur');
-  $('#hit').onpointermove=e=>{
-    const b=svg.getBoundingClientRect(),x=(e.clientX-b.left)/b.width*W,t=t0+(x-m.l)/(W-m.l-m.r)*(t1-t0);
-    let best=rows[0];for(const r of rows)if(Math.abs(r.t-t)<Math.abs(best.t-t))best=r;
-    const px=X(best.t.getTime());cur.setAttribute('x1',px);cur.setAttribute('x2',px);cur.style.display='';
-    tip.style.display='block';tip.style.left=(px/W*b.width)+'px';tip.style.top=(Y(best[p.k])/H*b.height)+'px';
-    tip.textContent=`${fmt(best[p.k],p)} ${p.unit} · ${fdt(best.t)}`;
-  };
-  $('#hit').onpointerleave=()=>{tip.style.display='none';cur.style.display='none'};
+
+  const values = rows.map(r => Number(r[p.k]));
+  let lo = Math.min(...values, p.min ?? Infinity);
+  let hi = Math.max(...values, p.max ?? -Infinity);
+
+  const pad = (hi - lo) * 0.12 || 1;
+  lo = Math.max(0, lo - pad);
+  hi += pad;
+
+  const X = i => m.l + (i + 0.5) *
+    ((W - m.l - m.r) / rows.length);
+
+  const Y = v => H - m.b -
+    ((v - lo) / (hi - lo)) * (H - m.t - m.b);
+
+  let html = '';
+
+  // Horizontal gridlines
+  for (let i = 0; i <= 5; i++) {
+    const v = lo + (hi - lo) * i / 5;
+    const y = Y(v);
+
+    html += `
+      <line x1="${m.l}" x2="${W-m.r}"
+        y1="${y}" y2="${y}" stroke="var(--line)"/>
+      <text x="${m.l-10}" y="${y+4}"
+        text-anchor="end" font-size="11"
+        fill="var(--muted)">${v.toFixed(p.dec)}</text>
+    `;
+  }
+
+  // Permissible limits
+  if (p.max != null && p.max >= lo && p.max <= hi) {
+    html += `
+      <line x1="${m.l}" x2="${W-m.r}"
+        y1="${Y(p.max)}" y2="${Y(p.max)}"
+        stroke="var(--bad)" stroke-dasharray="6 4"/>
+    `;
+  }
+
+  if (p.min != null && p.min >= lo && p.min <= hi) {
+    html += `
+      <line x1="${m.l}" x2="${W-m.r}"
+        y1="${Y(p.min)}" y2="${Y(p.min)}"
+        stroke="var(--bad)" stroke-dasharray="6 4"/>
+    `;
+  }
+
+  // One dot = one independent household sample
+  rows.forEach((r, i) => {
+    const v = Number(r[p.k]);
+    const color = status(p, v) === 'bad'
+      ? 'var(--bad)' : 'var(--accent)';
+
+    const code = r.sample_code ||
+      r.student_name || `Sample ${i + 1}`;
+
+    html += `
+      <circle cx="${X(i)}" cy="${Y(v)}" r="6"
+        fill="${color}" stroke="var(--surface)"
+        stroke-width="1.5">
+        <title>${esc(code)}: ${fmt(v,p)} ${p.unit}</title>
+      </circle>
+      <text x="${X(i)}" y="${H-m.b+18}"
+        text-anchor="middle" font-size="10"
+        fill="var(--muted)">${i+1}</text>
+    `;
+  });
+
+  html += `
+    <text x="${W/2}" y="${H-10}"
+      text-anchor="middle" font-size="12"
+      fill="var(--muted)">Household sample</text>
+  `;
+
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = html;
 }
+
 
 function alerts(){
   const rows=inRange(DATA[S.sid]),items=[];
@@ -172,7 +242,29 @@ $('#fU').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
 
 /* ---- Forms ---- */
 const dS=$('#dlgS'),dR=$('#dlgR');
-$('#rfields').innerHTML=P.map(p=>`<label>${p.name}${p.unit?' ('+p.unit+')':''}<input name="${p.k}" type="number" step="any" min="0"${p.k==='ph'?' max="14"':''}></label>`).join('');
+$('#rfields').innerHTML = `
+<label>Household Sample ID
+<input name="sample_code" type="text" required
+placeholder="e.g. V01-H01">
+</label>
+
+<label>Water Source
+<select name="source_type">
+<option value="">Select source</option>
+<option>Tap water</option>
+<option>Well</option>
+<option>Borehole</option>
+<option>Spring</option>
+<option>River</option>
+<option>Other</option>
+</select>
+</label>
+` + P.map(p =>
+  `<label>${p.name}${p.unit?' ('+p.unit+')':''}
+  <input name="${p.k}" type="number" step="any"
+  ${p.k==='ph'?'min="0" max="14"':'min="0"'}>
+  </label>`
+).join('');
 function openStation(){$('#eS').textContent='';dS.showModal()}
 function openReading(){
   if(!ST.length)return openStation();
@@ -184,7 +276,13 @@ $('#fS').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
   try{await api('stations','POST',{name:f.get('name'),location:f.get('location')});S.sid=f.get('name').trim();e.target.reset();dS.close();await load()}
   catch(x){$('#eS').textContent=x.message}};
 $('#fR').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
-  const body={station_id:+f.get('station'),taken_at:new Date(f.get('taken')).toISOString(),student_name:String(f.get('student_name')||'').trim()};
+  const body = {
+  station_id: +f.get('station'),
+  taken_at: new Date(f.get('taken')).toISOString(),
+  sample_code: String(f.get('sample_code') || '').trim(),
+  source_type: String(f.get('source_type') || ''),
+  student_name: String(f.get('student_name') || '').trim()
+};
   P.forEach(p=>{const v=f.get(p.k);body[p.k]=v===''?null:+v});
   try{await api('readings','POST',body);S.sid=ST.find(x=>x.id===body.station_id).name;e.target.reset();dR.close();await load()}
   catch(x){$('#eR').textContent=x.message}};
