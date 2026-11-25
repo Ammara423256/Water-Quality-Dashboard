@@ -1,7 +1,7 @@
+
 /* ---- Config: edit limits here. min/max = allowed range, m = "near limit" margin ---- */
 const P=[
  {k:'ph',  name:'pH',               unit:'',     min:6.5, max:8.5,  m:.25, dec:2, noise:.3},
- {k:'turbidity',name:'Turbidity',        unit:'NTU',  max:5,             m:1,   dec:1, noise:.8},
  {k:'dissolved_oxygen',  name:'Dissolved oxygen', unit:'mg/L', min:5,             m:1,   dec:1, noise:.6},
  {k:'tds', name:'TDS',              unit:'mg/L', max:1000,          m:100, dec:0, noise:40},
  {k:'conductivity',name:'Electrical conductivity',unit:'µS/cm',max:1500,m:150,dec:0,noise:60},
@@ -128,10 +128,10 @@ async function load(){
   if(!DATA[S.sid])S.sid=st.length?st[0].name:null;
   render();
 }
-const SH={ph:'pH',turbidity:'Turb.',dissolved_oxygen:'DO',tds:'TDS',conductivity:'EC',temperature:'Temp'};
+const SH={ph:'pH',dissolved_oxygen:'DO',tds:'TDS',conductivity:'EC',temperature:'Temp'};
 function readingsList(){
   const rows=DATA[S.sid]||[];
-  $('#rl').innerHTML=rows.length?rows.slice(-10).reverse().map(r=>`<li><span>${fdt(r.t)}</span><span class="w">${P.map(p=>SH[p.k]+' '+fmt(r[p.k],p)).join(' · ')}</span>`+
+  $('#rl').innerHTML=rows.length?rows.slice(-10).reverse().map(r=>`<li><span>${fdt(r.t)}${r.student_name?' · <b>'+esc(r.student_name)+'</b>':''}</span><span class="w">${P.map(p=>SH[p.k]+' '+fmt(r[p.k],p)).join(' · ')}</span>`+
     (canEdit()?`<button class="btn" data-del="${r.id}" aria-label="Delete reading from ${fdt(r.t)}">Delete</button>`:'')+`</li>`).join(''):'<li class="empty">No readings yet for this station.</li>';
 }
 
@@ -184,7 +184,7 @@ $('#fS').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
   try{await api('stations','POST',{name:f.get('name'),location:f.get('location')});S.sid=f.get('name').trim();e.target.reset();dS.close();await load()}
   catch(x){$('#eS').textContent=x.message}};
 $('#fR').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);
-  const body={station_id:+f.get('station'),taken_at:new Date(f.get('taken')).toISOString()};
+  const body={station_id:+f.get('station'),taken_at:new Date(f.get('taken')).toISOString(),student_name:String(f.get('student_name')||'').trim()};
   P.forEach(p=>{const v=f.get(p.k);body[p.k]=v===''?null:+v});
   try{await api('readings','POST',body);S.sid=ST.find(x=>x.id===body.station_id).name;e.target.reset();dR.close();await load()}
   catch(x){$('#eR').textContent=x.message}};
