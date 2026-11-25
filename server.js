@@ -174,11 +174,6 @@ app.delete('/api/stations/:id', requireAuth, requireEditor, handle(async (req, r
 }));
 
 /* ---- Readings: anyone logged in can view; editors and admins can change ---- */
-app.get('/api/readings', requireAuth, handle(async (req, res) => {
-  const r = await pool.query('SELECT * FROM readings ORDER BY taken_at');
-  res.json(r.rows);
-}));
-
 app.post('/api/readings', requireAuth, requireEditor, handle(async (req, res) => {
   const b = req.body;
 
@@ -192,11 +187,12 @@ app.post('/api/readings', requireAuth, requireEditor, handle(async (req, res) =>
   const sampleCode = String(b.sample_code || '').trim();
   const sourceType = String(b.source_type || '').trim();
 
-  if (!sampleCode) throw new Error('Sample ID is required');
+  if (!sampleCode) throw new Error('Household sample ID is required');
 
   const t = new Date(b.taken_at);
-
   if (isNaN(t)) throw new Error('Invalid collection date');
+
+  const student = String(b.student_name || '').trim().slice(0, 80) || null;
 
   const v = [
     num(b.ph, 0, 14),
@@ -206,26 +202,26 @@ app.post('/api/readings', requireAuth, requireEditor, handle(async (req, res) =>
     num(b.conductivity, 0, 1e6)
   ];
 
-  if (v.every(x => x === null)) {
+  if (v.every(x => x === null))
     throw new Error('Enter at least one measurement');
-  }
 
-  const result = await pool.query(
-    `INSERT INTO readings
+  const result = await pool.query(`
+    INSERT INTO readings
     (station_id, taken_at, sample_code, source_type,
-     ph, dissolved_oxygen, tds, temperature, conductivity)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-     RETURNING id`,
-    [
-      st.rows[0].id,
-      t.toISOString(),
-      sampleCode,
-      sourceType || null,
-      ...v
-    ]
-  );
+     student_name, ph, dissolved_oxygen, tds,
+     temperature, conductivity)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    RETURNING id
+  `, [
+    b.station_id,
+    t.toISOString(),
+    sampleCode,
+    sourceType || null,
+    student,
+    ...v
+  ]);
 
-  res.status(201).json({ id: result.rows[0].id });
+  res.status(201).json({id: result.rows[0].id});
 }));
 
 const port = process.env.PORT || 3000;
