@@ -40,8 +40,8 @@ Then open http://localhost:3000 and sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD
 
 ## Using it
 - **Add station** — name and optional location. (Editors and admins.)
-- **Add reading** — pick a station, a date/time, and any of pH, turbidity, dissolved oxygen,
-  TDS, electrical conductivity, temperature (leave fields blank if not measured). (Editors and admins.)
+- **Add reading** — pick a station, a date/time, and any of pH, dissolved oxygen,
+  TDS, electrical conductivity, temperature, plus the student's name (leave fields blank if not measured). (Editors and admins.)
 - Readings and stations can be deleted from the dashboard. (Editors and admins.)
 - **Manage users** — add or remove accounts, and set their role. (Admins only.)
 - The chart, status colors, and breach list update from whatever is in the database.
@@ -91,7 +91,7 @@ marked **(editor)** also require the editor or admin role, and **(admin)** the a
   `DELETE /api/users/:id` (admin)
 - `GET /api/stations`, `POST /api/stations` `{name, location}` (editor),
   `DELETE /api/stations/:id` (editor)
-- `GET /api/readings`, `POST /api/readings` `{station_id, taken_at, ph, turbidity, dissolved_oxygen, tds, temperature, conductivity}` (editor),
+- `GET /api/readings`, `POST /api/readings` `{station_id, taken_at, student_name, ph, dissolved_oxygen, tds, temperature, conductivity}` (editor),
   `DELETE /api/readings/:id` (editor)
 
 ## Files
