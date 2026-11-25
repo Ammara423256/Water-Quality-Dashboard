@@ -40,6 +40,7 @@ async function init() {
     );
   `);
   await pool.query(`ALTER TABLE readings ADD COLUMN IF NOT EXISTS conductivity REAL;`);
+  await pool.query(`ALTER TABLE readings ADD COLUMN IF NOT EXISTS student_name TEXT;`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_readings_station_time ON readings(station_id, taken_at);`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -180,16 +181,18 @@ app.get('/api/readings', requireAuth, handle(async (req, res) => {
 
 app.post('/api/readings', requireAuth, requireEditor, handle(async (req, res) => {
   const b = req.body;
+  console.log('reading submitted:', JSON.stringify(b)); // temporary — safe to remove
   const st = await pool.query('SELECT id FROM stations WHERE id = $1', [b.station_id]);
   if (!st.rows.length) throw new Error('Unknown station');
   const t = new Date(b.taken_at);
   if (isNaN(t)) throw new Error('Invalid date and time');
-  const v = [num(b.ph, 0, 14), num(b.turbidity, 0, 1e5), num(b.dissolved_oxygen, 0, 30), num(b.tds, 0, 1e5), num(b.temperature, -5, 60), num(b.conductivity, 0, 1e6)];
+  const student = String(b.student_name || '').trim().slice(0, 80) || null;
+  const v = [num(b.ph, 0, 14), num(b.dissolved_oxygen, 0, 30), num(b.tds, 0, 1e5), num(b.temperature, -5, 60), num(b.conductivity, 0, 1e6)];
   if (v.every(x => x === null)) throw new Error('Enter at least one measurement');
   const r = await pool.query(
-    `INSERT INTO readings (station_id, taken_at, ph, turbidity, dissolved_oxygen, tds, temperature, conductivity)
+    `INSERT INTO readings (station_id, taken_at, student_name, ph, dissolved_oxygen, tds, temperature, conductivity)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-    [st.rows[0].id, t.toISOString(), ...v]
+    [st.rows[0].id, t.toISOString(), student, ...v]
   );
   res.status(201).json({ id: r.rows[0].id });
 }));
